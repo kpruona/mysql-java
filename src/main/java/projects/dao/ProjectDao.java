@@ -25,7 +25,7 @@ public class ProjectDao extends DaoBase {
 	private static final String PROJECT_CATEGORY_TABLE = "project_category";
 	private static final String STEP_TABLE = "step";
 
-	
+
 	public Project insertProject(Project project) {
 		// @formatter:off
 		String sql = ""
@@ -76,7 +76,7 @@ public class ProjectDao extends DaoBase {
 					while(rs.next()) {
 						projects.add(extract(rs, Project.class));
 
-					
+
 					}
 
 					return projects;
@@ -99,14 +99,14 @@ public class ProjectDao extends DaoBase {
 		try(Connection conn = DbConnection.getConnection()) {
 			startTransaction(conn);
 
-		
+
 			try {
 				Project project = null;
 
 				try(PreparedStatement stmt = conn.prepareStatement(sql)) {
 					setParameter(stmt, 1, projectId, Integer.class);
 
-					
+
 
 					try(ResultSet rs = stmt.executeQuery()) {
 						if(rs.next()) {
@@ -115,7 +115,7 @@ public class ProjectDao extends DaoBase {
 					}
 				}
 
-			
+
 				if(Objects.nonNull(project)) {
 					project.getMaterials().addAll(fetchMaterialsForProject(conn, projectId));
 					project.getSteps().addAll(fetchStepsForProject(conn, projectId));
@@ -124,7 +124,7 @@ public class ProjectDao extends DaoBase {
 
 				commitTransaction(conn);
 
-				
+
 				return Optional.ofNullable(project);
 			}
 			catch(Exception e) {
@@ -203,5 +203,93 @@ public class ProjectDao extends DaoBase {
 			}
 		}
 	}
+	//vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+	public boolean modifyProjectDetails(Project project) {
+	    // @formatter:off
+	    String sql = ""
+	        + "UPDATE " + PROJECT_TABLE + " SET "
+	        + "project_name = ?, "
+	        + "estimated_hours = ?, "
+	        + "actual_hours = ?, "
+	        + "difficulty = ?, "
+	        + "notes = ? "
+	        + "WHERE project_id = ?";
+	    // @formatter:on
+
+	    try(Connection conn = DbConnection.getConnection()) {
+	      startTransaction(conn);
+
+	      try(PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        setParameter(stmt, 1, project.getProjectName(), String.class);
+	        setParameter(stmt, 2, project.getEstimatedHours(), BigDecimal.class);
+	        setParameter(stmt, 3, project.getActualHours(), BigDecimal.class);
+	        setParameter(stmt, 4, project.getDifficulty(), Integer.class);
+	        setParameter(stmt, 5, project.getNotes(), String.class);
+	        setParameter(stmt, 6, project.getProjectId(), Integer.class);
+
+	        boolean modified = stmt.executeUpdate() == 1;
+	        commitTransaction(conn);
+	        return modified;
+	      }
+	      
+	      catch(Exception e) {
+	        rollbackTransaction(conn);
+	        throw new DbException(e);
+	      }
+	    }
+	    
+	    catch(SQLException e) {
+	      throw new DbException(e);
+	    }
+	  
+	
 
 }
+
+
+
+	public boolean deleteProject(Integer projectId) {
+	    String sql = "DELETE FROM " + PROJECT_TABLE + " WHERE project_id = ?";
+
+	    try (Connection conn = DbConnection.getConnection()) {
+	        startTransaction(conn);
+
+	        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+	            setParameter(stmt, 1, projectId, Integer.class);
+	            boolean deleted = stmt.executeUpdate() == 1;
+
+	            if (!deleted) {
+	                throw new DbException("Project with ID " + projectId + " does not exist.");
+	            }
+	            commitTransaction(conn);
+	            return deleted;
+	        } catch (Exception e) {
+	            rollbackTransaction(conn);
+	            throw new DbException("An error occurred while trying to delete the project: " + e.getMessage());
+	        }
+	    } catch (SQLException e) {
+	        throw new DbException("Database error: " + e.getMessage());
+	    }
+	}
+	//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
